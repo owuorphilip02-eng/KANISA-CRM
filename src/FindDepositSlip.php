@@ -5,6 +5,7 @@ require_once __DIR__ . '/Include/PageInit.php';
 
 use ChurchCRM\Authentication\AuthenticationManager;
 use ChurchCRM\dto\SystemURLs;
+use ChurchCRM\dto\SystemConfig;
 use ChurchCRM\Utils\RedirectUtils;
 use ChurchCRM\view\PageHeader;
 
@@ -79,6 +80,23 @@ require_once __DIR__ . '/Include/Header.php';
               disabled> <?= gettext('Generate Deposit Slip for Selected Rows (PDF)') ?></button>
     </div>
   </div>
+</div>
+
+<style>
+@media print {
+    .church-print-header { display: flex !important; }
+}
+.church-print-header { display: none; }
+</style>
+
+<div class="church-print-header align-items-center gap-3 mb-3 pb-3 border-bottom">
+    <img src="<?= SystemURLs::getRootPath() ?>/Images/logo-churchcrm-350.png"
+         style="height:70px; width:auto; object-fit:contain; flex-shrink:0;">
+    <div>
+        <div style="font-size:16pt; font-weight:bold;"><?= strtoupper(SystemConfig::getValue('sChurchName')) ?></div>
+        <div style="font-size:11pt;">Diocese of Nairobi</div>
+        <div style="font-size:10pt; font-weight:600;"><?= strtoupper(date('j F Y')) ?></div>
+    </div>
 </div>
 
 <script src="<?= SystemURLs::assetVersioned('/skin/js/FindDepositSlip.js') ?>"></script>

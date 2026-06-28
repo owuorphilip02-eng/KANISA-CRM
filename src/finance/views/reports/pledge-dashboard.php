@@ -63,7 +63,7 @@ require SystemURLs::getDocumentRoot() . '/Include/Header.php';
             <div class="card finance-card shadow-sm border-0 h-100">
                 <div class="card-body text-center py-4 finance-metric-card metric-payments">
                     <div class="finance-metric-value">
-                        $<?= number_format($totalPayments, 2) ?>
+                        KES <?= number_format($totalPayments, 2) ?>
                     </div>
                     <div class="text-white-50 text-uppercase small fw-bold mt-2 finance-metric-label">
                         <?= gettext('Total Payments') ?>

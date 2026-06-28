@@ -15,5 +15,10 @@ $app = MvcAppFactory::create('/finance', [
 require __DIR__ . '/routes/dashboard.php';
 require __DIR__ . '/routes/reports.php';
 require __DIR__ . '/routes/pledges.php';
+require __DIR__ . '/routes/requisitions.php';
+require __DIR__ . '/routes/deposits-breakdown.php';
+require __DIR__ . '/routes/quickbooks.php';
+require __DIR__ . '/routes/withdrawals.php';
+require __DIR__ . '/routes/balance.php';
 
 $app->run();

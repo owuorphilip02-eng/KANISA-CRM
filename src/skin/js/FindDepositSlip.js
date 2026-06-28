@@ -263,45 +263,13 @@ function initializeDepositSlip() {
     var type = this.getAttribute("data-exportType");
 
     if (type === "pdf") {
-      // Validate all PDFs first before starting downloads
-      var validDeposits = [];
-      var skippedCount = 0;
-      var validationPending = selectedRows.length;
-
+      var ids = [];
       $.each(selectedRows, function (index, value) {
-        $.ajax({
-          method: "GET",
-          url: window.CRM.root + "/api/deposits/" + value.Id + "/payments",
-          dataType: "json",
-        })
-          .done(function (data) {
-            var count = Array.isArray(data) ? data.length : 0;
-            if (count > 0) {
-              validDeposits.push(value);
-            } else {
-              skippedCount++;
-            }
-          })
-          .fail(function (jqXHR) {
-            skippedCount++;
-          })
-          .always(function () {
-            validationPending--;
-            if (validationPending === 0) {
-              // All validations done, show summary and export valid deposits
-              if (skippedCount > 0) {
-                window.CRM.notify(
-                  i18next.t("Skipped") + " " + skippedCount + " " + i18next.t("deposit(s) with no payments"),
-                  { type: "warning", delay: 5000 },
-                );
-              }
-              $.each(validDeposits, function (idx, deposit) {
-                var url = window.CRM.root + "/api/deposits/" + deposit.Id + "/pdf";
-                window.CRM.VerifyThenLoadAPIContent(url);
-              });
-            }
-          });
+        ids.push(value.Id);
       });
+      if (ids.length === 0) return;
+      var url = window.CRM.root + "/DepositBatchPDF.php?ids=" + ids.join(",");
+      window.open(url, "_blank");
     } else {
       // csv or other types - proceed as before
       $.each(selectedRows, function (index, value) {

@@ -184,10 +184,10 @@ $MenuFirst = 1;
         <span class="navbar-toggler-icon"></span>
       </button>
       <a href="<?= SystemURLs::getRootPath() ?>/v2/dashboard" class="navbar-brand py-2">
-        <img src="<?= SystemURLs::getRootPath() ?>/Images/CRM_50x50.png"
-             alt="<?= InputUtils::escapeAttribute(ChurchMetaData::getChurchName() ?: 'ChurchCRM') ?>"
-             class="navbar-brand-image rounded"
-             style="height: 42px; width: auto;">
+          <img src="<?= SystemURLs::getRootPath() ?>/Images/CRM_50x50.png"
+               alt="<?= InputUtils::escapeAttribute(ChurchMetaData::getChurchName() ?: 'ChurchCRM') ?>"
+               class="navbar-brand-image"
+               style="height: 48px; width: auto; object-fit: contain;">
         <span class="navbar-brand-text ps-2 fs-4 fw-bold">
           <?= ChurchMetaData::getChurchName() ?: 'ChurchCRM' ?>
         </span>

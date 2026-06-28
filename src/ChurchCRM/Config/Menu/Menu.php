@@ -45,8 +45,9 @@ class Menu
             'Deposits'     => self::getDepositsMenu($isAdmin, $currentUser->isFinanceEnabled()),
             'Fundraiser'   => self::getFundraisersMenu($isAdmin),
             'Reports'      => self::getReportsMenu(),
+            'Inventory'    => new MenuItem(gettext('Inventory'), 'inventory', true, 'fa-boxes-stacked'),
         ];
-        
+
         // Backward compatibility: plugins that declare parent 'Email' still attach to Communication
         if (isset($menus['Communication'])) {
             $menus['Email'] = $menus['Communication'];
@@ -57,15 +58,15 @@ class Menu
 
         // Remove the backward-compat alias so it doesn't appear as a duplicate menu
         unset($menus['Email']);
-        
+
         // Allow plugins to add top-level menus via the MENU_BUILDING hook
         $menus = HookManager::applyFilters(Hooks::MENU_BUILDING, $menus);
-        
+
         // Admin menu is always last (at bottom of nav)
         if ($isAdmin) {
             $menus['Admin'] = self::getAdminMenu($isAdmin);
         }
-        
+
         return $menus;
 
     }
@@ -75,7 +76,7 @@ class Menu
         $calendarMenu = new MenuItem(gettext('Calendar'), 'event/calendars', $canViewEvents, 'fa-calendar');
         // Anniversaries calendar (ID 1) - black background
         $calendarMenu->addCounter(new MenuCounter('AnniversaryNumber', 'bg-dark', 0, gettext("Today's Wedding Anniversaries")));
-        // Birthdays calendar (ID 0) - blue background  
+        // Birthdays calendar (ID 0) - blue background
         $calendarMenu->addCounter(new MenuCounter('BirthdateNumber', 'bg-primary', 0, gettext("Today's Birthdays")));
         // Events happening today - yellow/warning background
         $calendarMenu->addCounter(new MenuCounter('EventsNumber', 'bg-warning', 0, gettext('Events Today')));
@@ -85,7 +86,7 @@ class Menu
 
     private static function getPeopleMenu(bool $isAdmin, bool $isMenuOptions, bool $isAddRecordsEnabled): MenuItem
     {
-        $peopleMenu = new MenuItem(gettext('People'), '', true, 'fa-people-group');
+        $peopleMenu = new MenuItem(gettext('Members'), '', true, 'fa-people-group');
         $peopleMenu->addSubMenu(new MenuItem(gettext('Dashboard'), 'people/dashboard', true, 'fa-gauge'));
         $peopleMenu->addSubMenu(new MenuItem(gettext('Add New') . ' ' . gettext('Person'), 'PersonEditor.php', $isAddRecordsEnabled, 'fa-user-plus'));
         $peopleMenu->addSubMenu(new MenuItem(gettext('Person Listing'), 'people/list', true, 'fa-person-half-dress'));
@@ -93,6 +94,7 @@ class Menu
         $peopleMenu->addSubMenu(new MenuItem(gettext('Add New') . ' ' . gettext('Family'), 'FamilyEditor.php', $isAddRecordsEnabled, 'fa-people-roof'));
         $peopleMenu->addSubMenu(new MenuItem(gettext('Family Listing'), 'people/family', true, 'fa-people-roof'));
         $peopleMenu->addSubMenu(new MenuItem(gettext('Family Map'), 'v2/map', true, 'fa-map'));
+        $peopleMenu->addSubMenu(new MenuItem(gettext('Membership Expiry'), 'people/membership-expiry', true, 'fa-id-card-clip'));
 
         if ($isAdmin || $isMenuOptions) {
             $adminMenu = new MenuItem(gettext('Admin'), '', true);
@@ -103,7 +105,7 @@ class Menu
             $adminMenu->addSubMenu(new MenuItem(gettext('Person Properties'), 'PropertyList.php?Type=p', $isMenuOptions, 'fa-person-half-dress'));
             $adminMenu->addSubMenu(new MenuItem(gettext('Person Custom Fields'), 'PersonCustomFieldsEditor.php', $isAdmin, 'fa-sliders'));
             $adminMenu->addSubMenu(new MenuItem(gettext('Volunteer Opportunities'), 'VolunteerOpportunityEditor.php', $isAdmin, 'fa-handshake-angle'));
-    
+
             $peopleMenu->addSubMenu($adminMenu);
         }
 
@@ -210,7 +212,7 @@ class Menu
     {
         try {
             $pluginMenuItems = PluginManager::getPluginMenuItems();
-            
+
             foreach ($pluginMenuItems as $parentKey => $items) {
                 // Find the parent menu (case-insensitive match)
                 $parentMenu = null;
@@ -220,18 +222,18 @@ class Menu
                         break;
                     }
                 }
-                
+
                 if ($parentMenu === null) {
                     // Parent menu not found, skip these items
                     continue;
                 }
-                
+
                 // Add each plugin menu item as a submenu
                 foreach ($items as $item) {
                     $label = $item['label'] ?? '';
                     $url = $item['url'] ?? '';
                     $icon = $item['icon'] ?? 'fa-plug';
-                    
+
                     if (!empty($label) && !empty($url)) {
                         $parentMenu->addSubMenu(new MenuItem($label, $url, true, $icon));
                     }
@@ -268,6 +270,11 @@ class Menu
         $depositsMenu->addSubMenu(new MenuItem(gettext('Deposit Reports'), 'finance/reports', $isFinanceEnabled, 'fa-file-invoice'));
         $depositsMenu->addSubMenu(new MenuItem(gettext('Pledge Dashboard'), 'finance/pledge/dashboard', $isFinanceEnabled, 'fa-handshake'));
         $depositsMenu->addSubMenu(new MenuItem(gettext('Edit Deposit Slip'), 'DepositSlipEditor.php?DepositSlipID=' . $_SESSION['iCurrentDeposit'], $isFinanceEnabled, 'fa-pen-to-square'));
+        $depositsMenu->addSubMenu(new MenuItem('M-Pesa Collect', 'Kenya/MpesaCollect.php', $isFinanceEnabled, 'fa-mobile-screen-button'));
+        $depositsMenu->addSubMenu(new MenuItem('M-Pesa Transactions', 'Kenya/MpesaTransactions.php', $isFinanceEnabled, 'fa-receipt'));
+        $depositsMenu->addSubMenu(new MenuItem('Deposits', 'Kenya/Deposits.php', $isFinanceEnabled, 'fa-archive'));
+        $depositsMenu->addSubMenu(new MenuItem(gettext('Requisitions'), 'finance/requisitions', $isFinanceEnabled, 'fa-file-invoice-dollar'));
+        $depositsMenu->addSubMenu(new MenuItem(gettext('QuickBooks Summary'), 'finance/quickbooks', $isFinanceEnabled, 'fa-book'));
 
         if ($isAdmin) {
             $adminMenu = new MenuItem(gettext('Admin'), '', $isAdmin);

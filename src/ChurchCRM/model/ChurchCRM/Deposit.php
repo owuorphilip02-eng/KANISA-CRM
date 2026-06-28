@@ -3,6 +3,7 @@
 namespace ChurchCRM\model\ChurchCRM;
 
 use ChurchCRM\dto\SystemConfig;
+use ChurchCRM\dto\SystemURLs;
 use ChurchCRM\model\ChurchCRM\Base\Deposit as BaseDeposit;
 use ChurchCRM\model\ChurchCRM\DepositQuery;
 use ChurchCRM\model\ChurchCRM\Map\DonationFundTableMap;
@@ -230,148 +231,115 @@ class Deposit extends BaseDeposit
 
     private function generateDepositSummary(\stdClass $thisReport): void
     {
-        $thisReport->depositSummaryParameters = new \stdClass();
-
-        $thisReport->depositSummaryParameters->title = new \stdClass();
-        $thisReport->depositSummaryParameters->title->x = 85;
-        $thisReport->depositSummaryParameters->title->y = 7;
-
-        $thisReport->depositSummaryParameters->date = new \stdClass();
-        $thisReport->depositSummaryParameters->date->x = 185;
-        $thisReport->depositSummaryParameters->date->y = 7;
-
-        $thisReport->depositSummaryParameters->summary = new \stdClass();
-        $thisReport->depositSummaryParameters->summary->x = 12;
-        $thisReport->depositSummaryParameters->summary->y = 15;
-        $thisReport->depositSummaryParameters->summary->intervalY = 4;
-        $thisReport->depositSummaryParameters->summary->FundX = 15;
-        $thisReport->depositSummaryParameters->summary->MethodX = 55;
-        $thisReport->depositSummaryParameters->summary->FromX = 80;
-        $thisReport->depositSummaryParameters->summary->MemoX = 120;
-        $thisReport->depositSummaryParameters->summary->AmountX = 185;
-
-        $thisReport->depositSummaryParameters->aggregateX = 135;
-
         $thisReport->pdf->addPage();
-        $thisReport->pdf->SetXY($thisReport->depositSummaryParameters->date->x, $thisReport->depositSummaryParameters->date->y);
-        $thisReport->pdf->Write(8, $thisReport->deposit->dep_Date);
 
-        $thisReport->pdf->SetXY($thisReport->depositSummaryParameters->title->x, $thisReport->depositSummaryParameters->title->y);
-        $thisReport->pdf->SetFont('Courier', 'B', 20);
-        $thisReport->pdf->Write(8, 'Deposit Summary ' . $this->getId());
-        $thisReport->pdf->SetFont('Times', 'B', 10);
-
-        $thisReport->curX = $thisReport->depositSummaryParameters->summary->x;
-        $thisReport->curY = $thisReport->depositSummaryParameters->summary->y;
-
-        $thisReport->pdf->SetFont('Times', 'B', 10);
-        $thisReport->pdf->SetXY($thisReport->curX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'Chk No.');
-
-        $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->FundX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'Fund');
-
-        $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->MethodX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'PmtMethod');
-
-        $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->FromX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'Rcd From');
-
-        $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->MemoX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'Memo');
-
-        $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->AmountX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'Amount');
-        $thisReport->curY += 2 * $thisReport->depositSummaryParameters->summary->intervalY;
-
-        //while ($aRow = mysqli_fetch_array($rsPledges))
-        foreach ($this->getPledges() as $payment) {
-            $thisReport->pdf->SetFont('Times', '', 10);
-
-            // Format Data
-            $checkNo = $payment->getCheckNo();
-            $fundName = DonationFundQuery::create()->findOneById($payment->getFundId())->getName();
-            $comment = $payment->getComment();
-            //$family = FamilyQuery::create()->findOneById($payment->getFamId());
-            $family = $payment->getFamily();
-            if ($family !== null) {
-                $familyName = $payment->getFamily()->getName();
-            } else {
-                $familyName = gettext('Anonymous');
-            }
-
-            if (strlen($checkNo) > 8) {
-                $checkNo = '...' . mb_substr($checkNo, -8, 8);
-            }
-            if (strlen($fundName) > 20) {
-                $fundName = mb_substr($fundName, 0, 20) . '...';
-            }
-            if (strlen($comment) > 40) {
-                $comment = mb_substr($comment, 0, 38) . '...';
-            }
-            if (strlen($familyName) > 25) {
-                $familyName = mb_substr($familyName, 0, 24) . '...';
-            }
-
-            $thisReport->pdf->printRightJustified($thisReport->curX + 2, $thisReport->curY, $checkNo);
-
-            $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->FundX, $thisReport->curY);
-            $thisReport->pdf->Write(8, $fundName);
-
-            $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->MethodX, $thisReport->curY);
-            $thisReport->pdf->Write(8, $payment->getMethod());
-
-            $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->FromX, $thisReport->curY);
-            $thisReport->pdf->Write(8, $familyName);
-
-            $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->MemoX, $thisReport->curY);
-            $thisReport->pdf->Write(8, $comment);
-
-            $thisReport->pdf->SetFont('Courier', '', 8);
-
-            $thisReport->pdf->printRightJustified($thisReport->curX + $thisReport->depositSummaryParameters->summary->AmountX, $thisReport->curY, $payment->getAmount());
-
-            $thisReport->curY += $thisReport->depositSummaryParameters->summary->intervalY;
-
-            if ($thisReport->curY >= 250) {
-                $thisReport->pdf->addPage();
-                $thisReport->curY = $thisReport->topY;
-            }
+        // ── Church Letterhead ──────────────────────────────────────────
+        $logoPath = SystemURLs::getDocumentRoot() . '/Images/logo-churchcrm-350.png';
+        if (is_readable($logoPath)) {
+            $thisReport->pdf->Image($logoPath, 12, 6, 18, 18, 'PNG');
         }
+        $thisReport->pdf->SetFont('Times', 'B', 14);
+        $thisReport->pdf->SetXY(32, 7);
+        $thisReport->pdf->Write(6, strtoupper(SystemConfig::getValue('sChurchName')));
+        $thisReport->pdf->SetFont('Times', '', 10);
+        $thisReport->pdf->SetXY(32, 14);
+        $thisReport->pdf->Write(5, 'Diocese of Nairobi');
+        $thisReport->pdf->SetFont('Times', '', 9);
+        $thisReport->pdf->SetXY(32, 19);
+        $thisReport->pdf->Write(5, strtoupper(date('j F Y')));
+        $thisReport->pdf->Line(12, 26, 200, 26);
+        // ── End Letterhead ─────────────────────────────────────────────
 
-        $thisReport->curY += $thisReport->depositSummaryParameters->summary->intervalY;
-
-        $thisReport->pdf->SetXY($thisReport->curX + $thisReport->depositSummaryParameters->summary->MemoX, $thisReport->curY);
-        $thisReport->pdf->Write(8, 'Deposit total');
-
-        $grandTotalStr = sprintf('%.2f', $this->getTotalAmount());
-        $thisReport->pdf->printRightJustified($thisReport->curX + $thisReport->depositSummaryParameters->summary->AmountX, $thisReport->curY, $grandTotalStr);
-        $thisReport->curY += $thisReport->depositSummaryParameters->summary->intervalY * 2;
-
-        // Now print deposit totals by fund
-        $thisReport->curY += 2 * $thisReport->depositSummaryParameters->summary->intervalY;
-        if (SystemConfig::getBooleanValue('bDisplayBillCounts')) {
-            $this->generateCashDenominations($thisReport);
-        }
-
-        // Now print deposit totals by fund
-        $thisReport->curX = $thisReport->depositSummaryParameters->aggregateX;
-        $this->generateTotalsByFund($thisReport);
-        $thisReport->curY += $thisReport->depositSummaryParameters->summary->intervalY;
-
-        $this->generateTotalsByCurrencyType($thisReport);
-        $thisReport->curY += $thisReport->depositSummaryParameters->summary->intervalY * 2;
-
+        // ── Deposit Title ──────────────────────────────────────────────
+        $thisReport->pdf->SetFont('Times', 'B', 14);
+        $thisReport->pdf->SetXY(12, 30);
+        $thisReport->pdf->Cell(186, 8, 'DEPOSIT SUMMARY - #' . $this->getId(), 0, 1, 'C');
+        $thisReport->pdf->SetFont('Times', '', 10);
+        $thisReport->pdf->SetXY(12, 39);
+        $thisReport->pdf->Write(6, 'Deposit Date: ' . $this->getDate()->format('d F Y'));
         if (!empty($this->getComment())) {
-            $thisReport->pdf->SetXY($thisReport->curX, $thisReport->curY);
-            $thisReport->pdf->MultiCell(0, $thisReport->depositSummaryParameters->summary->intervalY, gettext('Deposit Comment') . ': ' . $this->getComment(), 0, 'L');
+            $thisReport->pdf->SetXY(12, 45);
+            $thisReport->pdf->Write(6, 'Comment: ' . $this->getComment());
         }
-        $thisReport->curY += 130;
-        $thisReport->curX = $thisReport->depositSummaryParameters->summary->x;
+        $thisReport->pdf->Line(12, 52, 200, 52);
+        // ── End Title ──────────────────────────────────────────────────
 
-        $this->generateWitnessSignature($thisReport);
+        // ── Payments Table Header ──────────────────────────────────────
+        $curY = 55;
+        $thisReport->pdf->SetFont('Times', 'B', 10);
+        $thisReport->pdf->SetFillColor(220, 220, 220);
+        $thisReport->pdf->SetXY(12, $curY);
+        $thisReport->pdf->Cell(40, 7, 'FUND', 1, 0, 'L', true);
+        $thisReport->pdf->Cell(30, 7, 'METHOD', 1, 0, 'L', true);
+        $thisReport->pdf->Cell(75, 7, 'REFERENCE / MEMO', 1, 0, 'L', true);
+        $thisReport->pdf->Cell(41, 7, 'AMOUNT (KES)', 1, 1, 'R', true);
+        $curY += 7;
+
+        // ── Payments Table Rows ────────────────────────────────────────
+        $thisReport->pdf->SetFont('Times', '', 10);
+        $grandTotal = 0;
+
+        foreach ($this->getPledges() as $payment) {
+            $fund = DonationFundQuery::create()->findOneById($payment->getFundId());
+            $fundName = $fund ? $fund->getName() : 'General';
+            $method   = $payment->getMethod();
+            $memo     = $payment->getComment() ?: $payment->getCheckNo() ?: '';
+            $amount   = $payment->getAmount();
+            $grandTotal += $amount;
+
+            if (strlen($fundName) > 22) {
+                $fundName = mb_substr($fundName, 0, 21) . '.';
+            }
+            if (strlen($memo) > 48) {
+                $memo = mb_substr($memo, 0, 47) . '.';
+            }
+
+            $thisReport->pdf->SetXY(12, $curY);
+            $thisReport->pdf->Cell(40, 6, $fundName, 1, 0, 'L');
+            $thisReport->pdf->Cell(30, 6, $method, 1, 0, 'L');
+            $thisReport->pdf->Cell(75, 6, $memo, 1, 0, 'L');
+            $thisReport->pdf->Cell(41, 6, number_format($amount, 2), 1, 1, 'R');
+            $curY += 6;
+
+            if ($curY >= 250) {
+                $thisReport->pdf->addPage();
+                $curY = 15;
+            }
+        }
+
+        // ── Grand Total ────────────────────────────────────────────────
+        $curY += 2;
+        $thisReport->pdf->SetFont('Times', 'B', 10);
+        $thisReport->pdf->SetXY(12, $curY);
+        $thisReport->pdf->Cell(145, 7, 'TOTAL', 1, 0, 'R');
+        $thisReport->pdf->Cell(41, 7, 'KES ' . number_format($grandTotal, 2), 1, 1, 'R');
+        $curY += 7;
+
+        // ── Totals by Fund ─────────────────────────────────────────────
+        $curY += 6;
+        $thisReport->pdf->SetFont('Times', 'B', 10);
+        $thisReport->pdf->SetXY(12, $curY);
+        $thisReport->pdf->Write(6, 'Totals by Fund:');
+        $curY += 7;
+        $thisReport->pdf->SetFont('Times', '', 10);
+        foreach ($this->getFundTotals() as $fund) {
+            $thisReport->pdf->SetXY(12, $curY);
+            $thisReport->pdf->Write(6, $fund['Name']);
+            $thisReport->pdf->SetXY(120, $curY);
+            $thisReport->pdf->Write(6, 'KES ' . number_format($fund['Total'], 2));
+            $curY += 6;
+        }
+
+        // ── Witness Signatures ─────────────────────────────────────────
+        $curY = $thisReport->pdf->GetPageHeight() - 35;
+        $thisReport->pdf->SetFont('Times', '', 10);
+        foreach (['Witness 1', 'Witness 2', 'Witness 3'] as $witness) {
+            $thisReport->pdf->SetXY(12, $curY);
+            $thisReport->pdf->Write(6, $witness);
+            $thisReport->pdf->Line(30, $curY + 6, 100, $curY + 6);
+            $curY += 12;
+        }
     }
-
     private function generateWitnessSignature(\stdClass $thisReport): void
     {
         $thisReport->curX = $thisReport->depositSummaryParameters->summary->x;
@@ -401,19 +369,6 @@ class Deposit extends BaseDeposit
 
         $Report->pdf = new PdfDepositReport();
         $Report->funds = DonationFundQuery::create()->find();
-
-        //in 2.2.0, this setting will be part of the database, but to avoid 2.1.7 schema changes, I'm defining it in code.
-        $sDepositSlipType = SystemConfig::getValue('sDepositSlipType');
-
-        if ($sDepositSlipType === 'QBDT') {
-            //Generate a QuickBooks Deposit Ticket.
-            $this->generateQBDepositSlip($Report);
-        } elseif ($sDepositSlipType === 'PTDT') {
-            //placeholder for Peachtree Deposit Tickets.
-        } elseif ($sDepositSlipType === 'GDT') {
-            //placeholder for generic deposit ticket.
-        }
-        //$this->generateBankDepositSlip($Report);
 
         $this->generateDepositSummary($Report);
 

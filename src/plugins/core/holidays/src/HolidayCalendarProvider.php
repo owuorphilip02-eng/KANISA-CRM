@@ -117,7 +117,7 @@ class HolidayCalendarProvider implements SystemCalendar
                 }
             }
         } catch (\Throwable $e) {
-            // Never break the calendar UI on a Yasumi failure.
+             error_log('Kenya Holiday Error: ' . $e->getMessage());
         }
 
         return $events;

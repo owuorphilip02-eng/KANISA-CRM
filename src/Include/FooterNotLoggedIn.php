@@ -9,8 +9,8 @@ use ChurchCRM\Service\SystemService;
 
 <div class="auth-footer">
   <div>
-    <strong><?= gettext('Copyright') ?> &copy; <?= SystemService::getCopyrightDate() ?> 
-    <a href="https://churchcrm.io" target="_blank" rel="noopener noreferrer"><b>Church</b>CRM</a></strong>. 
+    <strong><?= gettext('Copyright') ?> &copy; <?= SystemService::getCopyrightDate() ?>
+    <a href="https://churchcrm.io" target="_blank" rel="noopener noreferrer"><b>Kanisa</b>CRM</a></strong>.
     <?= gettext('All rights reserved') ?>.
   </div>
   <div class="auth-footer-social">

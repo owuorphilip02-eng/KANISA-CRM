@@ -111,7 +111,7 @@ function viewDashboard(Request $request, Response $response, array $args): Respo
 
     $pageArgs = [
         'sRootPath'                       => SystemURLs::getRootPath(),
-        'sPageTitle'                      => gettext('Welcome to') . ' ' . ChurchMetaData::getChurchName(),
+        'sPageTitle'                      => '',
         'aBreadcrumbs'                    => PageHeader::breadcrumbs([
             [gettext('Dashboard')],
         ]),

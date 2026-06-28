@@ -39,82 +39,117 @@ $currentDepositId = $dashboardData['currentDepositId'];
 
 $isAdmin = AuthenticationManager::getCurrentUser()->isAdmin();
 
+// Requisition stats
+$con = Propel\Runtime\Propel::getConnection();
+
+$stmtDeposits = $con->query("
+    SELECT COALESCE(SUM(plg_amount), 0) as total
+    FROM pledge_plg
+    WHERE plg_PledgeOrPayment = 'Payment'
+    AND YEAR(plg_date) = YEAR(CURDATE())
+");
+$totalDepositsAmount = (float) $stmtDeposits->fetchColumn();
+
+$stmtWithdrawals = $con->query("
+    SELECT COALESCE(SUM(amount), 0) as total
+    FROM fin_requisitions
+    WHERE status = 'approved'
+    AND YEAR(approved_date) = YEAR(CURDATE())
+");
+$totalWithdrawals = (float) $stmtWithdrawals->fetchColumn();
+
+$stmtPending = $con->query("
+    SELECT COUNT(*) FROM fin_requisitions WHERE status = 'pending'
+");
+$pendingRequisitions = (int) $stmtPending->fetchColumn();
+
+$balance = $totalDepositsAmount - $totalWithdrawals;
+
 $sRootPath = SystemURLs::getRootPath();
 ?>
 
 <div class="container-fluid">
 
     <!-- Stat Cards Row -->
-    <div class="row mb-3">
-        <div class="col-6 col-lg-3">
-            <div class="card card-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-auto">
-                            <span class="bg-success text-white avatar rounded-circle">
-                                <i class="fa-solid fa-hand-holding-dollar icon"></i>
-                            </span>
-                        </div>
-                        <div class="col">
-                            <div class="fw-medium">$<?= number_format($ytdPaymentTotal ?? 0, 2) ?></div>
-                            <div class="text-body-secondary"><?= gettext('YTD Payments') ?></div>
-                        </div>
+<div class="row mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-success text-white avatar rounded-circle">
+                            <i class="fa-solid fa-arrow-down icon"></i>
+                        </span>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="card card-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-auto">
-                            <span class="bg-primary text-white avatar rounded-circle">
-                                <i class="fa-solid fa-file-signature icon"></i>
-                            </span>
-                        </div>
-                        <div class="col">
-                            <div class="fw-medium">$<?= number_format($ytdPledgeTotal ?? 0, 2) ?></div>
-                            <div class="text-body-secondary"><?= gettext('YTD Pledges') ?></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="card card-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-auto">
-                            <span class="bg-secondary text-white avatar rounded-circle">
-                                <i class="fa-solid fa-people-roof icon"></i>
-                            </span>
-                        </div>
-                        <div class="col">
-                            <div class="fw-medium"><?= number_format($ytdDonorFamilies ?? 0) ?></div>
-                            <div class="text-body-secondary"><?= gettext('Donor Families') ?></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
-            <div class="card card-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-auto">
-                            <span class="bg-info text-white avatar rounded-circle">
-                                <i class="fa-solid fa-receipt icon"></i>
-                            </span>
-                        </div>
-                        <div class="col">
-                            <div class="fw-medium"><?= number_format($ytdPaymentCount) ?></div>
-                            <div class="text-body-secondary"><?= gettext('Total Payments') ?></div>
-                        </div>
+                    <div class="col">
+                        <a href="<?= $sRootPath ?>/finance/deposits/breakdown" class="text-decoration-none text-dark">
+    <div class="fw-medium">KES <?= number_format($totalDepositsAmount, 2) ?></div>
+    <div class="text-body-secondary"><?= gettext('Total Deposits') ?></div>
+</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-danger text-white avatar rounded-circle">
+                            <i class="fa-solid fa-arrow-up icon"></i>
+                        </span>
+                    </div>
+                    <div class="col">
+                        <a href="<?= $sRootPath ?>/finance/withdrawals" class="text-decoration-none text-dark">
+    <div class="fw-medium">KES <?= number_format($totalWithdrawals, 2) ?></div>
+    <div class="text-body-secondary"><?= gettext('Total Withdrawals') ?></div>
+</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-<?= $balance >= 0 ? 'success' : 'danger' ?> text-white avatar rounded-circle">
+                            <i class="fa-solid fa-scale-balanced icon"></i>
+                        </span>
+                    </div>
+                    <div class="col">
+                        <a href="<?= $sRootPath ?>/finance/balance" class="text-decoration-none">
+    <div class="fw-medium <?= $balance >= 0 ? 'text-success' : 'text-danger' ?>">
+        KES <?= number_format(abs($balance), 2) ?>
+        <?= $balance < 0 ? '<small>(deficit)</small>' : '' ?>
+    </div>
+    <div class="text-body-secondary"><?= gettext('Balance') ?></div>
+</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <span class="bg-warning text-white avatar rounded-circle">
+                            <i class="fa-solid fa-clock icon"></i>
+                        </span>
+                    </div>
+                    <div class="col">
+                        <div class="fw-medium"><?= $pendingRequisitions ?></div>
+                        <div class="text-body-secondary"><?= gettext('Pending Requisitions') ?></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Quick Actions -->
     <div class="card mb-3">
@@ -308,7 +343,7 @@ $sRootPath = SystemURLs::getRootPath();
                                     <td><?= $deposit->getDate('M j, Y') ?></td>
                                     <td><span class="badge bg-blue-lt text-blue"><?= $deposit->getType() ?></span></td>
                                     <td class="text-truncate finance-truncate"><?= InputUtils::escapeHTML($deposit->getComment() ?? '') ?></td>
-                                    <td class="text-end fw-bold">$<?= number_format($deposit->getVirtualColumn('totalAmount') ?? 0, 2) ?></td>
+                                    <td class="text-end fw-bold">KES <?= number_format($deposit->getVirtualColumn('totalAmount') ?? 0, 2) ?></td>
                                     <td>
                                         <?php if ($deposit->getClosed()): ?>
                                         <span class="badge bg-green-lt text-green"><?= gettext('Closed') ?></span>
@@ -362,7 +397,7 @@ $sRootPath = SystemURLs::getRootPath();
                     </div>
                     <hr>
                     <div class="text-center mb-3">
-                        <div class="h3 text-success mb-0">$<?= number_format($currentDeposit->getVirtualColumn('totalAmount') ?? 0, 2) ?></div>
+                        <div class="h3 text-success mb-0">KES <?= number_format($currentDeposit->getVirtualColumn('totalAmount') ?? 0, 2) ?></div>
                         <small class="text-body-secondary"><?= gettext('Total Amount') ?></small>
                     </div>
                     <a href="<?= $sRootPath ?>/DepositSlipEditor.php?DepositSlipID=<?= $currentDeposit->getId() ?>" class="btn btn-primary w-100">

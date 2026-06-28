@@ -412,6 +412,18 @@ if (isset($_POST['PersonSubmit']) || isset($_POST['PersonSubmitAndAdd'])) {
 
         $person->save();
         $person->reload();
+        
+        // Set membership expiry if already registered checkbox is checked
+        if (!$personAlreadyExist && isset($_POST['IsRegistered'])) {
+            $pdo = Propel\Runtime\Propel::getConnection();
+            $stmt = $pdo->prepare("
+                UPDATE person_per 
+                SET per_membership_expires = DATE_ADD(CURDATE(), INTERVAL 1 YEAR),
+                    per_membership_status = 'active'
+                WHERE per_ID = ?
+            ");
+            $stmt->execute([$iPersonID]);
+        }
 
         if (!$personAlreadyExist) {
             $iPersonID = $person->getId();
@@ -973,6 +985,40 @@ require_once __DIR__ . '/Include/Header.php';
             </div>
         </div>
     </div>
+  
+<!-- Card 5: Registration -->
+<div class="card clearfix" id="registrationCard">
+    <div class="card-header d-flex align-items-center">
+        <h3 class="card-title"><i class="fa-solid fa-id-card me-2"></i><?= gettext('Registration') ?></h3>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-end">
+            <div class="col-12 col-md-4 mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="IsRegistered" name="IsRegistered" value="1"
+                        <?= !empty($person) && $person->getEnvelope() > 0 ? 'checked' : '' ?>>
+                    <label class="form-check-label fw-bold" for="IsRegistered">
+                        Already Registered Member
+                    </label>
+                </div>
+                <div class="text-body-secondary small mt-1">Check if member is already registered. Uncheck to register via M-Pesa.</div>
+            </div>
+            <div class="col-12 col-md-3 mb-3" id="regAmountDiv">
+                <label class="form-label fw-bold">Registration Amount (KES)</label>
+                <input type="number" id="regAmount" class="form-control" min="1" placeholder="e.g. 500">
+            </div>
+            <div class="col-12 col-md-5 mb-3" id="regButtonDiv">
+                <label class="form-label d-block">&nbsp;</label>
+                <button type="button" class="btn btn-success" id="registerMpesaBtn">
+                    <i class="fa-solid fa-mobile-screen-button me-1"></i> Register via M-Pesa
+                </button>
+                <span id="regStatus" class="ms-2"></span>
+            </div>
+        </div>
+        <!-- Payment status feedback -->
+        <div id="regFeedback" class="mt-2" style="display:none"></div>
+    </div>
+</div>
 
     <!-- Card 5: Church Membership -->
     <div class="card clearfix">
@@ -1065,8 +1111,8 @@ require_once __DIR__ . '/Include/Header.php';
     <!-- Form submit buttons -->
     <div class="d-flex gap-2 mt-4">
         <!-- Primary action: Save (green) -->
-        <button type="submit" name="PersonSubmit" class="btn btn-success flex-grow-1">
-            <i class="fa-solid fa-check me-2"></i><?= gettext('Save') ?>
+        <button type="submit" name="PersonSubmit" id="savePersonBtn" class="btn btn-success flex-grow-1" disabled>
+        <i class="fa-solid fa-check me-2"></i><?= gettext('Save') ?>
         </button>
         <!-- Secondary action: Save and Add (blue) -->
         <?php if (AuthenticationManager::getCurrentUser()->isAddRecordsEnabled()) { ?>
@@ -1106,6 +1152,122 @@ require_once __DIR__ . '/Include/Header.php';
         
         var famEl = document.getElementById("familyId");
         if (famEl && !famEl.tomselect) new TomSelect(famEl);
+        // ── REGISTRATION FLOW ──────────────────────────────────────────────────────
+const isRegisteredChk = document.getElementById('IsRegistered');
+const regAmountDiv    = document.getElementById('regAmountDiv');
+const regButtonDiv    = document.getElementById('regButtonDiv');
+const regAmount       = document.getElementById('regAmount');
+const registerBtn     = document.getElementById('registerMpesaBtn');
+const regFeedback     = document.getElementById('regFeedback');
+const saveBtn         = document.getElementById('savePersonBtn');
+
+let pollInterval = null;
+let registrationConfirmed = false;
+
+function setRegFeedback(msg, type) {
+    regFeedback.style.display = 'block';
+    regFeedback.innerHTML = '<div class="alert alert-' + type + ' mb-0">' + msg + '</div>';
+}
+
+function toggleRegUI() {
+    const isRegistered = isRegisteredChk.checked;
+    regAmountDiv.style.display  = isRegistered ? 'none' : 'block';
+    regButtonDiv.style.display  = isRegistered ? 'none' : 'block';
+    regFeedback.style.display   = 'none';
+
+    if (isRegistered) {
+        saveBtn.disabled = false;
+        registrationConfirmed = true;
+    } else {
+        saveBtn.disabled = !registrationConfirmed;
+    }
+}
+
+isRegisteredChk.addEventListener('change', toggleRegUI);
+toggleRegUI(); // run on load
+
+registerBtn.addEventListener('click', function() {
+    const phone  = document.getElementById('CellPhone').value.trim();
+    const amount = regAmount.value.trim();
+    const name   = (document.getElementById('FirstName').value + ' ' + document.getElementById('LastName').value).trim();
+
+    if (!phone) {
+        setRegFeedback('<i class="fa-solid fa-triangle-exclamation me-1"></i>Please enter a mobile phone number first.', 'warning');
+        return;
+    }
+    if (!amount || parseInt(amount) < 1) {
+        setRegFeedback('<i class="fa-solid fa-triangle-exclamation me-1"></i>Please enter a registration amount.', 'warning');
+        return;
+    }
+
+    registerBtn.disabled = true;
+    registerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Sending...';
+    setRegFeedback('<i class="fa-solid fa-spinner fa-spin me-1"></i> Sending STK Push to ' + phone + '...', 'info');
+
+    const formData = new FormData();
+    formData.append('phone', phone);
+    formData.append('amount', amount);
+    formData.append('name', name || 'Member Registration');
+
+    fetch('<?= SystemURLs::getRootPath() ?>/Kenya/RegistrationStkPush.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            setRegFeedback(
+                '<i class="fa-solid fa-mobile-screen-button me-1"></i> STK Push sent! Ask member to enter M-Pesa PIN on their phone.<br>' +
+                '<small class="text-body-secondary">Waiting for confirmation...</small>', 'info'
+            );
+            registerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Waiting...';
+            pollPaymentStatus(data.checkout_id);
+        } else {
+            setRegFeedback('<i class="fa-solid fa-circle-xmark me-1"></i> ' + data.message, 'danger');
+            registerBtn.disabled = false;
+            registerBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button me-1"></i> Register via M-Pesa';
+        }
+    })
+    .catch(() => {
+        setRegFeedback('Network error. Please try again.', 'danger');
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button me-1"></i> Register via M-Pesa';
+    });
+});
+
+function pollPaymentStatus(checkoutId) {
+    let attempts = 0;
+    const maxAttempts = 24; // 2 minutes (24 x 5s)
+
+    pollInterval = setInterval(function() {
+        attempts++;
+        fetch('<?= SystemURLs::getRootPath() ?>/Kenya/RegistrationStkStatus.php?checkout_id=' + encodeURIComponent(checkoutId))
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                clearInterval(pollInterval);
+                registrationConfirmed = true;
+                saveBtn.disabled = false;
+                registerBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Registered!';
+                registerBtn.classList.remove('btn-success');
+                registerBtn.classList.add('btn-outline-success');
+                setRegFeedback(
+                    '<i class="fa-solid fa-check-circle me-1"></i> <strong>Payment confirmed!</strong> Receipt: ' +
+                    (data.receipt || 'N/A') + '<br>You can now save the member.', 'success'
+                );
+            } else if (data.status === 'failed' || attempts >= maxAttempts) {
+                clearInterval(pollInterval);
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button me-1"></i> Try Again';
+                setRegFeedback(
+                    '<i class="fa-solid fa-circle-xmark me-1"></i> Payment ' +
+                    (attempts >= maxAttempts ? 'timed out' : 'failed or cancelled') +
+                    '. You can try again or skip registration.', 'danger'
+                );
+            }
+        });
+    }, 5000); // poll every 5 seconds
+}
     });
 </script>
 

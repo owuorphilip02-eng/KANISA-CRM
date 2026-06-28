@@ -162,6 +162,21 @@
     "skip_audit": true,
     "isRTL": false
   },
+    "English - Kenya": {
+        "poEditor": "en",
+        "locale": "en_KE",
+        "languageCode": "en",
+        "countryCode": "KE",
+        "nativeName": "English - Kenya",
+        "region": "Africa",
+        "dataTables": "en-GB",
+        "fullCalendar": true,
+        "fullCalendarLocale": "en",
+        "datePicker": false,
+        "momentLocale": "en",
+        "isRTL": false,
+        "skip_audit": true
+    },
   "English - South Africa": {
     "poEditor": "en-za",
     "locale": "en_ZA",

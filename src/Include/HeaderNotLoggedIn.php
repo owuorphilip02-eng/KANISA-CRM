@@ -32,7 +32,7 @@ $localeInfo = Bootstrapper::getCurrentLocale(); // always returns a LocaleInfo o
 
     <script src="<?= SystemURLs::assetVersioned('/skin/external/moment/moment.min.js') ?>"></script>
 
-    <title>ChurchCRM: <?= $sPageTitle ?></title>
+    <title>KanisaCRM: <?= $sPageTitle ?></title>
 
     <?= PluginManager::getPluginHeadContent() ?>
 
@@ -44,7 +44,7 @@ $localeInfo = Bootstrapper::getCurrentLocale(); // always returns a LocaleInfo o
     if (!window.CRM) {
         window.CRM = {};
     }
-    
+
     // Extend window.CRM with server-side configuration (preserving existing properties like notify)
     Object.assign(window.CRM, {
       root:"<?= SystemURLs::getRootPath() ?>",
